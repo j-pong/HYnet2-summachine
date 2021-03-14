@@ -1,8 +1,6 @@
-# HYnet
-Fully Unsupervised Learning for Continual Sequence when High Local Correlation
-
+# HYnet2-summachine
+Summarization machine for multilingual paragraphs and sentences using hybrid seq2seq ASR model
 ## Installation
-
 
 ### 1. Installaion of docker for ssh env
 - Basic of docker installation
@@ -17,7 +15,7 @@ make _build
 make run
 ```
 
-### 2. Installaion of kaldi for speech
+### 2. Installaion of kaldi for utils
 ```bash
 git clone https://github.com/kaldi-asr/kaldi kaldi
 
@@ -47,20 +45,22 @@ cd tools
 ./meta_installers/install_hynet.sh
 ```
 
-## Make custom example with task
+## Run example
+1. Set the DB path of egs/linersum/asr1/db.sh (i.e. LINERSUM)
+2. Set the DB path and run it with the following lines:
+
 ```bash
-cp -r tools/espnet/egs2/TEMPLATE/asr1/* egs/TEMPLATE/asr1/
+cd egs/linersum/asr1
+
+# training
+./run.sh --asr_tag {tag_name}
+
+# training with stage
+./run.sh --asr_tag {tag_name} --stage 2
+
 ```
 
 ## Bugfix
-
-ctc_segmentation/ctc_segmentation_dyn.pyx error
-- Remove ctc_segmentation at tools/espnet/setup.py that is included in requirements
-
-ctc install error with pip version
-```bash
-pip install pip==19; pip install warpctc-pytorch==0.2.1+torch16.cuda102
-```
 
 matplotlib version error
 - Remove matplotlib at tools/espnet/setup.py that is included in requirements

@@ -41,9 +41,6 @@ python=python3       # Specify python to execute espnet commands.
 # Data preparation related
 local_data_opts= # The options given to local/data.sh.
 
-# Speed perturbation related
-speed_perturb_factors=  # perturbation factors, e.g. "0.9 1.0 1.1" (separated by space).
-
 # Feature extraction related
 feats_type=raw       # Feature type (raw or fbank_pitch).
 
@@ -96,7 +93,6 @@ cleaner=none     # Text cleaner.
 g2p=none         # g2p method (needed if token_type=phn).
 lang=noinfo      # The language type of corpus.
 local_score_opts=          # The options given to local/score.sh.
-asr_speech_fold_length=800 # fold_length for speech data during ASR training.
 asr_text_fold_length=150   # fold_length for text data during ASR training.
 
 log "$0 $*"
@@ -110,6 +106,7 @@ if [ $# -ne 0 ]; then
     exit 2
 fi
 
+. ./db.sh
 . ./path.sh
 . ./cmd.sh
 
@@ -122,12 +119,6 @@ fi
 # Check feature type
 if [ "${feats_type}" = raw ]; then
     data_feats=${dumpdir}/raw
-elif [ "${feats_type}" = fbank_pitch ]; then
-    data_feats=${dumpdir}/fbank_pitch
-elif [ "${feats_type}" = fbank ]; then
-    data_feats=${dumpdir}/fbank
-elif [ "${feats_type}" == extracted ]; then
-    data_feats=${dumpdir}/extracted
 else
     log "${help_message}"
     log "Error: not supported: --feats_type ${feats_type}"
@@ -227,7 +218,7 @@ if ! "${skip_data_prep}"; then
         mkdir -p "${bpedir}/train"
         mkdir -p "${bpedir}/valid"
 
-        ${python} local/data_prep.py /DB/4tb_hdd/db/LinerSum/result_prep.json "${bpedir}" 0 100 150 800
+        ${python} local/data_prep.py ${LINERSUM} "${bpedir}" 0 100 150 800
     fi
 
     if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
@@ -272,7 +263,7 @@ fi
 if ! "${skip_train}"; then
 
     if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-        log "Stage 9: ASR collect stats: train_set=${bpedir}/train, valid_set=${bpedir}/valid"
+        log "Stage 3: ASR collect stats: train_set=${bpedir}/train, valid_set=${bpedir}/valid"
 
         _opts=
         if [ -n "${asr_config}" ]; then
@@ -364,7 +355,7 @@ if ! "${skip_train}"; then
     if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         _asr_train_dir="${data_feats}/${train_set}"
         _asr_valid_dir="${data_feats}/${valid_set}"
-        log "Stage 10: ASR Training: train_set=${_asr_train_dir}, valid_set=${_asr_valid_dir}"
+        log "Stage 4: ASR Training: train_set=${_asr_train_dir}, valid_set=${_asr_valid_dir}"
 
         _opts=
         if [ -n "${asr_config}" ]; then
@@ -382,7 +373,7 @@ if ! "${skip_train}"; then
         mkdir -p "${asr_exp}"; echo "${run_args} --stage 10 \"\$@\"; exit \$?" > "${asr_exp}/run.sh"; chmod +x "${asr_exp}/run.sh"
 
         # NOTE(kamo): --fold_length is used only if --batch_type=folded and it's ignored in the other case
-        log "TTT training started... log: '${asr_exp}/train.log'"
+        log "ASR training started... log: '${asr_exp}/train.log'"
         if echo "${cuda_cmd}" | grep -e queue.pl -e queue-freegpu.pl &> /dev/null; then
             # SGE can't include "/" in a job name
             jobname="$(basename ${asr_exp})"
@@ -423,8 +414,8 @@ fi
 
 
 if ! "${skip_eval}"; then
-    if [ ${stage} -le 11 ] && [ ${stop_stage} -ge 11 ]; then
-        log "Stage 11: Decoding: training_dir=${asr_exp}"
+    if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+        log "Stage 5: Decoding: training_dir=${asr_exp}"
 
         if ${gpu_inference}; then
             _cmd="${cuda_cmd}"
@@ -504,8 +495,8 @@ if ! "${skip_eval}"; then
     fi
 
 
-    if [ ${stage} -le 12 ] && [ ${stop_stage} -ge 12 ]; then
-        log "Stage 12: Scoring"
+    if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+        log "Stage 6: Scoring"
         if [ "${token_type}" = pnh ]; then
             log "Error: Not implemented for token_type=phn"
             exit 1
